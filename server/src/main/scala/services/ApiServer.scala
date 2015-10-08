@@ -19,6 +19,17 @@ object ApiServer {
     override def write[R: Pickler](r: R) = Pickle.intoBytes(r)
   }
 
+  /*
+   * NOTE:
+   *
+   * SBT appears to have an issue in not incrementally compiling macros when its
+   * dependents changes. So in this case, the Router is dependent on Api trait,
+   * and if that trait changes, all invocation to the Router needs to be recompiled.
+   * The original Router invocation was in Application, but Application will probably
+   * not change when you change the Api service. As a work-around, move it here because
+   * if you change the Api trait, you will need to change the ApiService implementation,
+   * so this entire file (including the router invocation) would have to be recompiled.
+   */
   def route(path: String, b: Array[Byte]): Future[Array[Byte]] = {
     Router.route[Api](apiService)(
       autowire.Core.Request(path.split("/"), Unpickle[Map[String, ByteBuffer]].fromBytes(ByteBuffer.wrap(b)))
